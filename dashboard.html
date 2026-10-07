@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - قمرة القيادة</title>
+    <script src="ui-sounds.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        darkBg: '#0b0f19',
+                        darkCard: '#111827',
+                        darkBorder: '#1f2937',
+                        darkInput: '#0d1322'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 9999px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+    <div id="auth-gate" class="fixed inset-0 z-50 flex items-center justify-center bg-[#020108] px-4">
+        <form id="login-form" class="w-full max-w-md rounded-3xl border border-darkBorder bg-darkCard p-6 shadow-2xl">
+            <div class="mb-6 text-center">
+                <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-2xl text-white">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h1 class="text-xl font-extrabold text-white">تسجيل دخول لوحة التحكم</h1>
+                    <p class="mt-2 text-xs text-gray-400">أدخل رمز PIN الخاص بلوحة التحكم</p>
+                </div>
+                <label class="mb-2 block text-sm font-semibold text-gray-300" for="login-pin">رمز PIN</label>
+                <input id="login-pin" type="password" inputmode="numeric" minlength="6" required autocomplete="current-password" class="w-full rounded-xl border border-darkBorder bg-darkInput px-4 py-3 text-sm tracking-[0.4em] text-gray-200 outline-none focus:ring-2 focus:ring-indigo-500">
+            <button type="submit" class="mt-6 w-full rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3 text-sm font-bold text-white">دخول آمن</button>
+            <p id="login-status" class="mt-4 text-center text-xs text-rose-400" role="alert"></p>
+        </form>
+    </div>
+
+    <header class="bg-[#0b0f19]/90 backdrop-blur-md border-b border-darkBorder sticky top-0 z-40 px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center space-x-3 space-x-reverse">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white text-xl shadow-lg">
+                <i class="fa-solid fa-compass"></i>
+            </div>
+            <h1 class="text-lg md:text-2xl font-extrabold text-white">لوحة التحكم - قمرة القيادة</h1>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="openSite()" class="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-bold rounded-xl transition flex items-center">
+                <i class="fa-solid fa-rocket ml-2"></i> فتح الموقع
+            </button>
+            <button onclick="confirmResetAll()" class="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold rounded-xl transition flex items-center">
+                <i class="fa-solid fa-trash-can ml-2"></i> مسح الكل
+            </button>
+            <button onclick="signOutDashboard()" class="px-4 py-2 bg-slate-500/10 hover:bg-slate-500/20 text-slate-300 border border-slate-500/30 text-xs font-bold rounded-xl transition flex items-center">
+                <i class="fa-solid fa-right-from-bracket ml-2"></i> خروج
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="bg-darkCard border border-darkBorder rounded-2xl p-4 text-center">
+                <div class="text-2xl font-extrabold text-indigo-400" id="stat-articles">0</div>
+                <div class="text-xs text-gray-400 mt-1">مقالات</div>
+            </div>
+            <div class="bg-darkCard border border-darkBorder rounded-2xl p-4 text-center">
+                <div class="text-2xl font-extrabold text-amber-400" id="stat-books">0</div>
+                <div class="text-xs text-gray-400 mt-1">كتب</div>
+            </div>
+            <div class="bg-darkCard border border-darkBorder rounded-2xl p-4 text-center">
+                <div class="text-2xl font-extrabold text-violet-400" id="stat-chess">0</div>
+                <div class="text-xs text-gray-400 mt-1">شطرنج</div>
+            </div>
+            <div class="bg-darkCard border border-darkBorder rounded-2xl p-4 text-center">
+                <div class="text-2xl font-extrabold text-emerald-400" id="stat-momagat">0</div>
+                <div class="text-xs text-gray-400 mt-1">مماقات</div>
+            </div>
+        </div>
+
+        <div class="bg-darkCard p-2 rounded-2xl border border-darkBorder flex flex-wrap gap-2 justify-center">
+            <button onclick="switchMainTab('articles')" id="nav-articles" class="main-tab px-5 py-3 rounded-xl font-bold text-sm transition-all bg-indigo-600 text-white">
+                <i class="fa-solid fa-pen-nib ml-1"></i> المقالات
+            </button>
+            <button onclick="switchMainTab('chess')" id="nav-chess" class="main-tab px-5 py-3 rounded-xl font-bold text-sm transition-all text-gray-400 hover:text-white">
+                <i class="fa-solid fa-chess-knight ml-1"></i> الشطرنج
+            </button>
+            <button onclick="switchMainTab('reading')" id="nav-reading" class="main-tab px-5 py-3 rounded-xl font-bold text-sm transition-all text-gray-400 hover:text-white">
+                <i class="fa-solid fa-book ml-1"></i> ركن القراءة
+            </button>
+            <button onclick="switchMainTab('discussions')" id="nav-discussions" class="main-tab px-5 py-3 rounded-xl font-bold text-sm transition-all text-gray-400 hover:text-white">
+                <i class="fa-solid fa-comments ml-1"></i> مماقات
+            </button>
+        </div>
+
+        <section class="bg-darkCard border border-darkBorder rounded-3xl p-6 md:p-8 space-y-5">
+            <div class="flex items-center justify-between gap-3 flex-wrap border-b border-darkBorder pb-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white">
+                        <i class="fa-solid fa-layer-group ml-2 text-fuchsia-400"></i> القوالب المخصصة
+                    </h2>
+                    <p class="text-xs text-gray-400 mt-1">أنشئ قالباً خاصاً لكل قسم، مثل قالب «لغز المات في نقلتين» للشطرنج.</p>
+                </div>
+                <select id="template-manager-section" onchange="renderCustomTemplates()" class="bg-darkInput border border-darkBorder rounded-xl px-3 py-2 text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-500">
+                    <option value="articles">المقالات</option>
+                    <option value="chess">الشطرنج</option>
+                    <option value="reading">ركن القراءة</option>
+                    <option value="discussions">مماقات</option>
+                </select>
+            </div>
+
+            <form onsubmit="saveCustomTemplate(event)" class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-2">اسم القالب</label>
+                    <input type="text" id="custom-template-name" required placeholder="مثال: لغز المات في نقلتين" class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-2">وصف قصير للقالب</label>
+                    <input type="text" id="custom-template-description" placeholder="مثال: تحليل تكتيكي مع الحل" class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-2">عنوان حقل العنوان</label>
+                    <input type="text" id="custom-template-title-label" placeholder="عنوان اللغز" class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-2">عنوان حقل المحتوى</label>
+                    <input type="text" id="custom-template-content-label" placeholder="التحليل والنقلات" class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-2">إرشادات الحقول</label>
+                    <textarea id="custom-template-guide" rows="3" placeholder="الموقف&#10;المطلوب&#10;الحل والتحليل" class="w-full bg-darkInput border border-darkBorder rounded-xl p-4 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-2">بداية جاهزة للمحتوى <span class="text-gray-500">(اختياري)</span></label>
+                    <textarea id="custom-template-starter" rows="3" placeholder="المطلوب: ..." class="w-full bg-darkInput border border-darkBorder rounded-xl p-4 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"></textarea>
+                </div>
+                <div class="md:col-span-2 flex items-center gap-4 flex-wrap rounded-2xl bg-darkInput/50 border border-darkBorder p-4">
+                    <label class="inline-flex items-center gap-2 text-xs font-semibold text-gray-300 cursor-pointer">
+                        <input id="custom-template-images" type="checkbox" class="accent-fuchsia-500 w-4 h-4">
+                        يسمح بإرفاق صور
+                    </label>
+                    <label class="inline-flex items-center gap-2 text-xs text-gray-400">
+                        الحد الأقصى
+                        <input id="custom-template-max-images" type="number" min="1" max="6" value="1" class="w-16 bg-darkInput border border-darkBorder rounded-lg px-2 py-1 text-center text-gray-200">
+                        صور
+                    </label>
+                </div>
+                <div class="md:col-span-2 flex justify-end">
+                    <button type="submit" class="px-6 py-3 bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white font-bold rounded-xl shadow-lg transition text-sm">
+                        <i class="fa-solid fa-plus ml-2"></i> حفظ القالب للقسم
+                    </button>
+                </div>
+            </form>
+
+            <div>
+                <h3 class="text-sm font-bold text-gray-200 mb-3">القوالب المتاحة لهذا القسم</h3>
+                <div id="custom-template-list" class="grid md:grid-cols-2 gap-3"></div>
+            </div>
+        </section>
+
+        <div id="template-image-attachment-panel" class="hidden bg-darkCard border border-fuchsia-500/30 rounded-3xl p-6 space-y-4">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                    <h3 class="font-bold text-fuchsia-300"><i class="fa-solid fa-images ml-2"></i> صور القالب</h3>
+                    <p id="template-image-hint" class="text-xs text-gray-400 mt-1"></p>
+                </div>
+                <label class="cursor-pointer px-4 py-2 rounded-xl bg-fuchsia-600/20 border border-fuchsia-500/30 text-fuchsia-300 text-xs font-bold hover:bg-fuchsia-600/30 transition">
+                    <i class="fa-solid fa-paperclip ml-1"></i> إرفاق صور
+                    <input id="template-image-input" type="file" accept="image/*" multiple class="hidden">
+                </label>
+            </div>
+            <div id="template-image-preview-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+        </div>
+
+        <div id="section-articles" class="form-section bg-darkCard border border-darkBorder rounded-3xl p-6 md:p-8 space-y-6">
+            <h2 class="text-lg font-bold text-indigo-400 border-b border-darkBorder pb-3">
+                <i class="fa-solid fa-pen-nib ml-2"></i> إضافة مقال جديد
+            </h2>
+            <form onsubmit="saveTopic(event, 'articles')" class="space-y-6">
+                <div class="bg-darkInput/60 border border-darkBorder rounded-2xl p-4">
+                    <label class="block text-xs font-semibold text-gray-300 mb-2">قالب المقال</label>
+                    <select id="template-select-articles" onchange="applyCustomTemplate('articles', this.value)" class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                    <p id="template-hint-articles" class="text-xs text-gray-500 mt-2"></p>
+                </div>
+                <div>
+                    <label id="art-title-label" class="block text-sm font-semibold text-gray-300 mb-2">عنوان الموضوع</label>
+                    <input type="text" id="art-title" required placeholder="أدخل عنوان المقال..." class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label id="art-content-label" class="block text-sm font-semibold text-gray-300 mb-2">محتوى الموضوع</label>
+                    <textarea id="art-content" rows="6" required placeholder="اكتب محتوى المقال هنا..." class="w-full bg-darkInput border border-darkBorder rounded-xl p-4 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold rounded-xl shadow-lg transition text-sm">
+                        <i class="fa-solid fa-floppy-disk ml-2"></i> نشر المقال
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="section-chess" class="form-section bg-darkCard border border-darkBorder rounded-3xl p-6 md:p-8 space-y-6 hidden">
+            <h2 class="text-lg font-bold text-indigo-400 border-b border-darkBorder pb-3">
+                <i class="fa-solid fa-chess-knight ml-2"></i> إضافة لغز شطرنج
+            </h2>
+            <form onsubmit="saveTopic(event, 'chess')" class="space-y-6">
+                <div class="bg-darkInput/60 border border-darkBorder rounded-2xl p-4">
+                    <label class="block text-xs font-semibold text-gray-300 mb-2">قالب موضوع الشطرنج</label>
+                    <select id="template-select-chess" onchange="applyCustomTemplate('chess', this.value)" class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-500"></select>
+                    <p id="template-hint-chess" class="text-xs text-gray-500 mt-2"></p>
+                </div>
+                <div>
+                    <label id="chess-title-label" class="block text-sm font-semibold text-gray-300 mb-2">العنوان</label>
+                    <input type="text" id="chess-title" required placeholder="مثال: لغز المات في نقلتين..." class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label id="chess-content-label" class="block text-sm font-semibold text-gray-300 mb-2">المحتوى</label>
+                    <textarea id="chess-content" rows="6" required placeholder="اكتب شرح التحليل والنقلات..." class="w-full bg-darkInput border border-darkBorder rounded-xl p-4 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold rounded-xl shadow-lg transition text-sm">
+                        <i class="fa-solid fa-floppy-disk ml-2"></i> نشر اللغز
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="section-reading" class="form-section bg-darkCard border border-darkBorder rounded-3xl p-6 md:p-8 space-y-6 hidden">
+            <h2 class="text-lg font-bold text-indigo-400 border-b border-darkBorder pb-3">
+                <i class="fa-solid fa-book ml-2"></i> إضافة كتاب
+            </h2>
+            <form onsubmit="saveTopic(event, 'reading')" class="space-y-6">
+                <div class="bg-darkInput/60 border border-darkBorder rounded-2xl p-4">
+                    <label class="block text-xs font-semibold text-gray-300 mb-2">قالب الكتاب</label>
+                    <select id="template-select-reading" onchange="applyCustomTemplate('reading', this.value)" class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500"></select>
+                    <p id="template-hint-reading" class="text-xs text-gray-500 mt-2"></p>
+                </div>
+                <div>
+                    <label id="book-title-label" class="block text-sm font-semibold text-gray-300 mb-2">اسم الكتاب</label>
+                    <input type="text" id="book-title" required placeholder="اسم الكتاب..." class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label id="book-author-label" class="block text-sm font-semibold text-gray-300 mb-2">اسم المؤلف</label>
+                    <input type="text" id="book-author" required placeholder="اسم المؤلف..." class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label id="book-content-label" class="block text-sm font-semibold text-gray-300 mb-2">المحتوى / المراجعة</label>
+                    <textarea id="book-content" rows="6" required placeholder="اكتب المراجعة..." class="w-full bg-darkInput border border-darkBorder rounded-xl p-4 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold rounded-xl shadow-lg transition text-sm">
+                        <i class="fa-solid fa-floppy-disk ml-2"></i> نشر الكتاب
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="section-discussions" class="form-section bg-darkCard border border-darkBorder rounded-3xl p-6 md:p-8 space-y-6 hidden">
+            <h2 class="text-lg font-bold text-indigo-400 border-b border-darkBorder pb-3">
+                <i class="fa-solid fa-comments ml-2"></i> إضافة مماقة
+            </h2>
+            <form onsubmit="saveTopic(event, 'discussions')" class="space-y-6">
+                <div class="bg-darkInput/60 border border-darkBorder rounded-2xl p-4">
+                    <label class="block text-xs font-semibold text-gray-300 mb-2">قالب المماقة</label>
+                    <select id="template-select-discussions" onchange="applyCustomTemplate('discussions', this.value)" class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+                    <p id="template-hint-discussions" class="text-xs text-gray-500 mt-2"></p>
+                </div>
+                <div>
+                    <label id="disc-title-label" class="block text-sm font-semibold text-gray-300 mb-2">العنوان</label>
+                    <input type="text" id="disc-title" required placeholder="عنوان المماقة..." class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div id="dialogue-container" class="space-y-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-28 bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-xs font-bold text-indigo-400 text-center">الشخص الأول</div>
+                        <input type="text" placeholder="نص الحديث..." class="flex-1 bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 dialogue-p1">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-28 bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-xs font-bold text-violet-400 text-center">الشخص الثاني</div>
+                        <input type="text" placeholder="نص الرد..." class="flex-1 bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 dialogue-p2">
+                    </div>
+                </div>
+                <button type="button" onclick="addDialogueRow()" class="px-4 py-2 bg-darkBorder text-indigo-300 text-xs font-bold rounded-xl">
+                    <i class="fa-solid fa-plus ml-1"></i> إضافة رد جديد
+                </button>
+                <div class="flex justify-end">
+                    <button type="submit" class="px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold rounded-xl shadow-lg transition text-sm">
+                        <i class="fa-solid fa-floppy-disk ml-2"></i> نشر المماقة
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <section class="bg-darkCard border border-darkBorder rounded-3xl p-6 md:p-8 space-y-5">
+            <div class="border-b border-darkBorder pb-4">
+                <h2 class="text-lg font-bold text-white">
+                    <i class="fa-solid fa-link ml-2 text-sky-400"></i> مصادر الموضوعات
+                </h2>
+                <p class="text-xs text-gray-400 mt-1">أضف روابط المصادر لتظهر كأزرار داخل صفحة عرض الموضوع في القسم الذي تختاره.</p>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-300 mb-2" for="source-topic-select">الموضوع والقسم</label>
+                <select id="source-topic-select" onchange="renderTopicSources()" class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500"></select>
+            </div>
+            <form id="source-form" class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-2" for="source-name">اسم المصدر</label>
+                    <input id="source-name" type="text" maxlength="100" required placeholder="مثال: وكالة ناسا" class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-2" for="source-url">رابط المصدر</label>
+                    <input id="source-url" type="url" required placeholder="https://example.com" class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500" dir="ltr">
+                </div>
+                <div class="md:col-span-2 flex justify-end">
+                    <button type="submit" class="px-6 py-3 bg-gradient-to-r from-sky-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg transition text-sm">
+                        <i class="fa-solid fa-plus ml-2"></i> مصدر جديد
+                    </button>
+                </div>
+            </form>
+            <div>
+                <h3 class="text-sm font-bold text-gray-200 mb-3">مصادر الموضوع المحدد</h3>
+                <div id="topic-source-list" class="space-y-2"></div>
+            </div>
+            <div class="space-y-4 border-t border-darkBorder pt-5">
+                <div>
+                    <h3 class="text-sm font-bold text-gray-200">حساب كاتب الموضوع</h3>
+                    <p class="mt-1 text-xs text-gray-400">أضف رابط حساب الكاتب واختر المنصة لتظهر أيقونتها أعلى الموضوع.</p>
+                </div>
+                <form id="author-profile-form" class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-2" for="author-profile-platform">منصة التواصل</label>
+                        <select id="author-profile-platform" class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            <option value="instagram">إنستغرام</option>
+                            <option value="tiktok">تيك توك</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-2" for="author-profile-url">رابط حساب الكاتب</label>
+                        <input id="author-profile-url" type="url" placeholder="https://www.instagram.com/username" class="w-full bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500" dir="ltr">
+                    </div>
+                    <div class="md:col-span-2 flex items-center justify-end gap-3">
+                        <button id="remove-author-profile" type="button" onclick="removeAuthorProfile()" class="hidden px-4 py-3 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-sm font-bold transition">
+                            إزالة الحساب
+                        </button>
+                        <button type="submit" class="px-6 py-3 bg-gradient-to-r from-sky-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg transition text-sm">
+                            <i class="fa-solid fa-floppy-disk ml-2"></i> حفظ حساب الكاتب
+                        </button>
+                    </div>
+                </form>
+                <p id="author-profile-status" class="text-xs text-gray-400" aria-live="polite"></p>
+            </div>
+        </section>
+
+        <div class="bg-darkCard border border-darkBorder rounded-3xl p-6 md:p-8 space-y-6">
+            <div class="flex items-center justify-between border-b border-darkBorder pb-4 flex-wrap gap-3">
+                <h3 class="text-lg font-bold text-white">
+                    <i class="fa-solid fa-table-cells ml-2 text-indigo-400"></i> السجلات المحفوظة
+                </h3>
+                <button onclick="loadSavedTopics()" class="px-4 py-2 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold rounded-xl">
+                    <i class="fa-solid fa-rotate ml-1"></i> مزامنة
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-right border-collapse">
+                    <thead>
+                        <tr class="bg-darkInput/70 text-gray-400 text-xs font-bold border-b border-darkBorder">
+                            <th class="py-3 px-4">القسم</th>
+                            <th class="py-3 px-4">العنوان</th>
+                            <th class="py-3 px-4">الوصف</th>
+                            <th class="py-3 px-4 text-center">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="db-table-body" class="divide-y divide-darkBorder text-sm text-gray-300"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-[#0b0f19] border-t border-darkBorder py-4 text-center text-xs text-gray-500">
+        قمرة القيادة © 2026
+    </footer>
+
+    <div id="toast" class="fixed bottom-6 left-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-slate-900 border border-emerald-500/40 text-white px-6 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toast-msg" class="text-sm font-bold">تم الحفظ!</span>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'magarat_knowledge_data';
+        const SITE_URL = 'h (4) (1) (1).html';
+        const SUPABASE_URL = 'https://qtrrwojxbezmwfdoyulj.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_1B9Y_nRduE6sQs97_9-VRA_dfFB05ms';
+        const SUPABASE_DATA_URL = `${SUPABASE_URL}/rest/v1/knowledge_data`;
+        const ADMIN_EMAIL = 'dsat422@gmail.com';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false
+            }
+        });
+        let dashboardSession = null;
+        let dashboardAttachedImages = [];
+        let activeFormSection = 'articles';
+        let unifiedData = null;
+
+        function authenticatedHeaders() {
+            if (!dashboardSession) throw new Error('لم يتم تسجيل الدخول');
+            return {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${dashboardSession.access_token}`
+            };
+        }
+
+        async function signInDashboard(event) {
+            event.preventDefault();
+            const status = document.getElementById('login-status');
+            status.textContent = 'جارٍ التحقق...';
+            const pin = document.getElementById('login-pin').value;
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email: ADMIN_EMAIL, password: pin });
+            if (error) {
+                status.textContent = 'بيانات الدخول غير صحيحة أو الحساب غير مفعّل.';
+                return;
+            }
+            dashboardSession = data.session;
+            document.getElementById('auth-gate').classList.add('hidden');
+            await hydrateFromSupabase();
+        }
+
+        async function signOutDashboard() {
+            await supabaseClient.auth.signOut();
+            window.location.reload();
+        }
+
+        const TEMPLATE_CONFIG = {
+            articles: {
+                label: 'المقالات',
+                selectId: 'template-select-articles',
+                hintId: 'template-hint-articles',
+                titleLabelId: 'art-title-label',
+                titleInputId: 'art-title',
+                contentLabelId: 'art-content-label',
+                contentInputId: 'art-content',
+                defaultTitleLabel: 'عنوان الموضوع',
+                defaultContentLabel: 'محتوى الموضوع',
+                defaultTitlePlaceholder: 'أدخل عنوان المقال...',
+                defaultContentPlaceholder: 'اكتب محتوى المقال هنا...'
+            },
+            chess: {
+                label: 'الشطرنج',
+                selectId: 'template-select-chess',
+                hintId: 'template-hint-chess',
+                titleLabelId: 'chess-title-label',
+                titleInputId: 'chess-title',
+                contentLabelId: 'chess-content-label',
+                contentInputId: 'chess-content',
+                defaultTitleLabel: 'العنوان',
+                defaultContentLabel: 'المحتوى',
+                defaultTitlePlaceholder: 'مثال: لغز المات في نقلتين...',
+                defaultContentPlaceholder: 'اكتب شرح التحليل والنقلات...'
+            },
+            reading: {
+                label: 'ركن القراءة',
+                selectId: 'template-select-reading',
+                hintId: 'template-hint-reading',
+                titleLabelId: 'book-title-label',
+                titleInputId: 'book-title',
+                contentLabelId: 'book-content-label',
+                contentInputId: 'book-content',
+                defaultTitleLabel: 'اسم الكتاب',
+                defaultContentLabel: 'المحتوى / المراجعة',
+                defaultTitlePlaceholder: 'اسم الكتاب...',
+                defaultContentPlaceholder: 'اكتب المراجعة...'
+            },
+            discussions: {
+                label: 'مماقات',
+                selectId: 'template-select-discussions',
+                hintId: 'template-hint-discussions',
+                titleLabelId: 'disc-title-label',
+                titleInputId: 'disc-title',
+                defaultTitleLabel: 'العنوان',
+                defaultTitlePlaceholder: 'عنوان المماقة...'
+            }
+        };
+
+        const BUILT_IN_TEMPLATES = {
+            articles: [
+                {
+                    id: 'builtin_articles_text',
+                    name: 'مقالة نصية',
+                    description: 'مقالة واضحة بدون صور',
+                    titleLabel: 'عنوان المقال',
+                    contentLabel: 'نص المقال',
+                    guide: 'الفكرة الأساسية\nالتفاصيل\nالخلاصة',
+                    builtIn: true
+                },
+                {
+                    id: 'builtin_articles_image',
+                    name: 'مقالة + صورة',
+                    description: 'صورة واحدة أعلى المقال مع النص',
+                    titleLabel: 'عنوان المقال',
+                    contentLabel: 'نص المقال',
+                    guide: 'الفكرة الأساسية\nشرح الصورة\nالتفاصيل',
+                    supportsImages: true,
+                    maxImages: 1,
+                    imageLayout: 'single',
+                    builtIn: true
+                },
+                {
+                    id: 'builtin_articles_gallery',
+                    name: 'مقالة + معرض صور',
+                    description: 'من صورتين إلى ست صور مع المقال',
+                    titleLabel: 'عنوان المقال',
+                    contentLabel: 'نص المقال',
+                    guide: 'وصف المعرض\nالفكرة الأساسية\nالخلاصة',
+                    supportsImages: true,
+                    maxImages: 6,
+                    imageLayout: 'gallery',
+                    builtIn: true
+                }
+            ],
+            chess: [
+                {
+                    id: 'builtin_chess_tactic',
+                    name: 'لغز تكتيكي',
+                    description: 'لغز قصير يركز على أفضل نقلة',
+                    titleLabel: 'عنوان اللغز',
+                    contentLabel: 'الموقف والتحليل',
+                    guide: 'وصف الوضعية\nالأبيض يلعب\nالمطلوب\nالحل الأفضل\nالفكرة التكتيكية',
+                    builtIn: true
+                },
+                {
+                    id: 'builtin_chess_opening',
+                    name: 'تحليل افتتاحية',
+                    description: 'قالب لشرح افتتاحية وخطتها',
+                    titleLabel: 'اسم الافتتاحية',
+                    contentLabel: 'النقلات والخطة',
+                    guide: 'اسم الافتتاحية\nالنقلات الأساسية\nالخطة الاستراتيجية\nالأخطاء الشائعة\nالخلاصة',
+                    builtIn: true
+                },
+                {
+                    id: 'builtin_chess_endgame',
+                    name: 'دراسة نهاية لعب',
+                    description: 'تحليل هادئ للنهايات والخطة الفائزة',
+                    titleLabel: 'عنوان دراسة النهاية',
+                    contentLabel: 'الوضعية والحل',
+                    guide: 'نوع النهاية\nالخطة الصحيحة\nالنقلة الحرجة\nطريقة الفوز أو التعادل\nالدرس المستفاد',
+                    builtIn: true
+                },
+                {
+                    id: 'builtin_chess_visual',
+                    name: 'رقعة مصورة',
+                    description: 'تحليل شطرنجي مع صورة للرقعة',
+                    titleLabel: 'عنوان الوضعية',
+                    contentLabel: 'شرح الرقعة والتحليل',
+                    guide: 'وصف الوضعية\nالنقلة المرشحة\nالتحليل\nالنتيجة',
+                    supportsImages: true,
+                    maxImages: 1,
+                    imageLayout: 'single',
+                    builtIn: true
+                }
+            ],
+            reading: [
+                {
+                    id: 'builtin_reading_review',
+                    name: 'مراجعة كتاب',
+                    description: 'مراجعة منظمة لكتاب',
+                    titleLabel: 'اسم الكتاب',
+                    contentLabel: 'المراجعة',
+                    guide: 'عن ماذا يتحدث الكتاب\nأبرز الأفكار\nما أعجبني\nلمن أنصح به',
+                    builtIn: true
+                },
+                {
+                    id: 'builtin_reading_quote',
+                    name: 'اقتباس وتأمل',
+                    description: 'اقتباس قصير مع تأمل شخصي',
+                    titleLabel: 'عنوان الاقتباس',
+                    contentLabel: 'الاقتباس والتأمل',
+                    guide: 'الاقتباس\nالمؤلف أو المصدر\nتأملي حول الاقتباس',
+                    builtIn: true
+                },
+                {
+                    id: 'builtin_reading_list',
+                    name: 'قائمة قراءة',
+                    description: 'قائمة كتب مقترحة حول موضوع',
+                    titleLabel: 'عنوان القائمة',
+                    contentLabel: 'الكتب المقترحة',
+                    guide: 'موضوع القائمة\nالكتاب الأول\nالكتاب الثاني\nسبب الاختيار',
+                    builtIn: true
+                }
+            ],
+            discussions: [
+                {
+                    id: 'builtin_discussions_dialogue',
+                    name: 'حوار قصير',
+                    description: 'حوار منظم بين شخصين',
+                    titleLabel: 'عنوان الحوار',
+                    guide: 'الفكرة التي يدور حولها الحوار',
+                    builtIn: true
+                },
+                {
+                    id: 'builtin_discussions_cosmic',
+                    name: 'خاطرة كونية',
+                    description: 'خاطرة قصيرة وتأمل مفتوح',
+                    titleLabel: 'عنوان الخاطرة',
+                    guide: 'المشهد أو الفكرة\nالخاطرة\nالسؤال الذي تتركه للقارئ',
+                    builtIn: true
+                },
+                {
+                    id: 'builtin_discussions_question',
+                    name: 'سؤال للنقاش',
+                    description: 'سؤال عميق مع وجهات نظر متعددة',
+                    titleLabel: 'السؤال',
+                    guide: 'السؤال الرئيسي\nوجهة النظر الأولى\nوجهة النظر الثانية\nالخلاصة المفتوحة',
+                    builtIn: true
+                }
+            ]
+        };
+
+        const TEMPLATE_KEYS = Object.keys(TEMPLATE_CONFIG);
+
+        function sanitizePlainText(value) {
+            const text = String(value ?? '');
+            if (!text) return '';
+            return text
+                .replace(/<script[\s\S]*?<\/script>/gi, '')
+                .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+                .replace(/<svg[\s\S]*?<\/svg>/gi, '')
+                .replace(/on\w+=/gi, '')
+                .replace(/javascript:/gi, '')
+                .replace(/vbscript:/gi, '');
+        }
+
+        function sanitizeStoredData(data) {
+            const normalized = data && typeof data === 'object' ? data : {};
+            ['articles', 'books', 'chess', 'momagat'].forEach(key => {
+                if (!Array.isArray(normalized[key])) normalized[key] = [];
+                normalized[key] = normalized[key].map(item => {
+                    if (!item || typeof item !== 'object') return item;
+                    const safeItem = { ...item };
+                    if (typeof safeItem.title === 'string') safeItem.title = sanitizePlainText(safeItem.title);
+                    if (typeof safeItem.category === 'string') safeItem.category = sanitizePlainText(safeItem.category);
+                    if (typeof safeItem.content === 'string') safeItem.content = sanitizeHtmlFragment(safeItem.content);
+                    safeItem.sources = Array.isArray(safeItem.sources)
+                        ? safeItem.sources
+                            .filter(source => source && typeof source === 'object')
+                            .map(source => ({
+                                id: String(source.id || ''),
+                                name: sanitizePlainText(source.name || ''),
+                                url: safeExternalSourceUrl(source.url)
+                            }))
+                            .filter(source => source.name && source.url)
+                        : [];
+                    const profile = safeItem.authorProfile;
+                    safeItem.authorProfile = profile && typeof profile === 'object' &&
+                        ['instagram', 'tiktok'].includes(profile.platform) &&
+                        safeExternalSourceUrl(profile.url)
+                        ? { platform: profile.platform, url: safeExternalSourceUrl(profile.url) }
+                        : null;
+                    return safeItem;
+                });
+            });
+            if (!normalized.templates || typeof normalized.templates !== 'object') normalized.templates = {};
+            TEMPLATE_KEYS.forEach(key => {
+                if (!Array.isArray(normalized.templates[key])) normalized.templates[key] = [];
+                normalized.templates[key] = normalized.templates[key].map(template => {
+                    if (!template || typeof template !== 'object') return template;
+                    const safeTemplate = { ...template };
+                    ['name', 'description', 'titleLabel', 'contentLabel', 'guide', 'starter'].forEach(prop => {
+                        if (typeof safeTemplate[prop] === 'string') safeTemplate[prop] = sanitizePlainText(safeTemplate[prop]);
+                    });
+                    return safeTemplate;
+                });
+            });
+            return normalized;
+        }
+
+        function normalizeData(data) {
+            const normalized = sanitizeStoredData(data);
+            ['articles', 'books', 'chess', 'momagat'].forEach(key => {
+                if (!Array.isArray(normalized[key])) normalized[key] = [];
+            });
+            if (!normalized.templates || typeof normalized.templates !== 'object') {
+                normalized.templates = {};
+            }
+            TEMPLATE_KEYS.forEach(key => {
+                if (!Array.isArray(normalized.templates[key])) normalized.templates[key] = [];
+            });
+            return normalized;
+        }
+
+        function getUnifiedData() {
+            return unifiedData || normalizeData({});
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function safeImageSource(value) {
+            const src = String(value ?? '').trim();
+            if (!src) return '';
+            if (/^(https?:\/\/|blob:|data:image\/)/i.test(src)) return src;
+            return '';
+        }
+
+        function safeExternalSourceUrl(value) {
+            try {
+                const url = new URL(String(value ?? '').trim());
+                return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+            } catch {
+                return '';
+            }
+        }
+
+        function sanitizeHtmlFragment(rawHtml) {
+            const input = String(rawHtml ?? '');
+            if (!input) return '';
+            const template = document.createElement('template');
+            template.innerHTML = input;
+            ['script', 'iframe', 'object', 'embed', 'svg', 'math', 'style', 'link', 'meta', 'base'].forEach(tag => {
+                template.content.querySelectorAll(tag).forEach(node => node.remove());
+            });
+            template.content.querySelectorAll('*').forEach(node => {
+                Array.from(node.attributes).forEach(attr => {
+                    const name = attr.name.toLowerCase();
+                    if (name.startsWith('on')) {
+                        node.removeAttribute(attr.name);
+                        return;
+                    }
+                    if (['src', 'href', 'xlink:href', 'srcdoc', 'action', 'formaction', 'background'].includes(name)) {
+                        const normalized = (attr.value || '').trim().toLowerCase();
+                        if (/^(javascript:|vbscript:|data:text\/html|data:application\/javascript)/.test(normalized)) {
+                            node.removeAttribute(attr.name);
+                        }
+                    }
+                });
+            });
+            return template.innerHTML;
+        }
+
+        async function saveUnifiedData(data) {
+            const normalized = normalizeData(data);
+            unifiedData = normalized;
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+            } catch (error) {
+                console.warn('تعذر حفظ البيانات محلياً:', error);
+            }
+            await syncDataToSupabase(normalized);
+            updateStats();
+        }
+
+        async function fetchDataFromSupabase() {
+            const response = await fetch(`${SUPABASE_DATA_URL}?id=eq.1&select=data`, {
+                headers: authenticatedHeaders()
+            });
+            if (!response.ok) throw new Error(`Supabase GET failed: ${response.status}`);
+            const rows = await response.json();
+            return rows[0] && rows[0].data ? normalizeData(rows[0].data) : null;
+        }
+
+        async function syncDataToSupabase(data) {
+            try {
+                const response = await fetch(SUPABASE_DATA_URL, {
+                    method: 'POST',
+                    headers: {
+                        ...authenticatedHeaders(),
+                        'Content-Type': 'application/json',
+                        Prefer: 'resolution=merge-duplicates,return=minimal'
+                    },
+                    body: JSON.stringify({ id: 1, data: normalizeData(data), updated_at: new Date().toISOString() })
+                });
+                if (!response.ok) throw new Error(`Supabase UPSERT failed: ${response.status}`);
+            } catch (error) {
+                console.error('تعذر مزامنة البيانات مع Supabase:', error);
+                showToast('❌ تعذر حفظ البيانات في Supabase');
+                throw error;
+            }
+
+        }
+
+        async function uploadAttachedImages() {
+            const urls = [];
+            for (const imageData of dashboardAttachedImages) {
+                const response = await fetch(imageData);
+                const blob = await response.blob();
+                const extension = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+                const uniqueId = typeof crypto?.randomUUID === 'function'
+                    ? crypto.randomUUID()
+                    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+                const path = `topics/${uniqueId}.${extension}`;
+                const upload = await supabaseClient.storage.from('topic-images').upload(path, blob, {
+                    contentType: blob.type,
+                    upsert: false
+                });
+                if (upload.error) {
+                    throw new Error(`Storage upload failed: ${upload.error.message}`);
+                }
+                const publicUrl = supabaseClient.storage.from('topic-images').getPublicUrl(path).data.publicUrl;
+                urls.push(publicUrl);
+            }
+            return urls;
+        }
+
+        async function hydrateFromSupabase() {
+            try {
+                const remoteData = await fetchDataFromSupabase();
+                unifiedData = remoteData || normalizeData({});
+                loadSavedTopics();
+            } catch (error) {
+                unifiedData = normalizeData({});
+                console.error('تعذر تحميل البيانات من Supabase:', error);
+                showToast('❌ تعذر تحميل البيانات من Supabase');
+            }
+        }
+
+        const SOURCE_SECTION_CONFIG = {
+            articles: { key: 'articles', label: 'المقالات' },
+            books: { key: 'books', label: 'ركن القراءة' },
+            chess: { key: 'chess', label: 'الشطرنج' },
+            momagat: { key: 'momagat', label: 'مماقات' }
+        };
+
+        function getSourceTopicSelection() {
+            const select = document.getElementById('source-topic-select');
+            if (!select.value) return null;
+            try {
+                const selection = JSON.parse(select.value);
+                const section = SOURCE_SECTION_CONFIG[selection.sectionKey];
+                if (!section) return null;
+                const topic = (getUnifiedData()[section.key] || []).find(item => String(item.id) === String(selection.id));
+                return topic ? { sectionKey: section.key, topic } : null;
+            } catch {
+                return null;
+            }
+        }
+
+        function refreshSourceTopicOptions() {
+            const select = document.getElementById('source-topic-select');
+            const previousValue = select.value;
+            const data = getUnifiedData();
+            const options = [];
+
+            Object.entries(SOURCE_SECTION_CONFIG).forEach(([sectionKey, section]) => {
+                (data[section.key] || []).forEach(topic => {
+                    const option = document.createElement('option');
+                    option.value = JSON.stringify({ sectionKey, id: topic.id });
+                    option.textContent = `${section.label} — ${topic.title || 'موضوع بلا عنوان'}`;
+                    options.push(option);
+                });
+            });
+
+            select.replaceChildren(...options);
+            if (options.some(option => option.value === previousValue)) {
+                select.value = previousValue;
+            }
+            select.disabled = options.length === 0;
+            document.getElementById('source-form').querySelector('button[type="submit"]').disabled = options.length === 0;
+            document.getElementById('author-profile-form').querySelector('button[type="submit"]').disabled = options.length === 0;
+            renderTopicSources();
+        }
+
+        function renderTopicSources() {
+            const list = document.getElementById('topic-source-list');
+            const selection = getSourceTopicSelection();
+            list.replaceChildren();
+            renderAuthorProfileForm(selection);
+            if (!selection) {
+                const empty = document.createElement('p');
+                empty.className = 'rounded-xl border border-darkBorder bg-darkInput/50 p-4 text-xs text-gray-500';
+                empty.textContent = 'انشر موضوعًا أولًا لتتمكن من إضافة مصدر إليه.';
+                list.appendChild(empty);
+                return;
+            }
+
+            const { topic } = selection;
+            if (!topic.sources.length) {
+                const empty = document.createElement('p');
+                empty.className = 'rounded-xl border border-darkBorder bg-darkInput/50 p-4 text-xs text-gray-500';
+                empty.textContent = 'لا توجد مصادر مضافة لهذا الموضوع بعد.';
+                list.appendChild(empty);
+                return;
+            }
+
+            topic.sources.forEach(source => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between gap-3 rounded-xl border border-darkBorder bg-darkInput/50 p-3';
+                const details = document.createElement('div');
+                details.className = 'min-w-0';
+                const name = document.createElement('p');
+                name.className = 'truncate text-sm font-bold text-gray-200';
+                name.textContent = source.name;
+                const url = document.createElement('p');
+                url.className = 'truncate text-xs text-gray-500';
+                url.textContent = source.url;
+                details.append(name, url);
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'shrink-0 rounded-lg p-2 text-gray-400 hover:bg-rose-500/10 hover:text-rose-400';
+                remove.setAttribute('aria-label', `حذف مصدر ${source.name}`);
+                remove.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+                remove.addEventListener('click', () => deleteTopicSource(source.id));
+                row.append(details, remove);
+                list.appendChild(row);
+            });
+        }
+
+        function renderAuthorProfileForm(selection) {
+            const form = document.getElementById('author-profile-form');
+            const profile = selection?.topic.authorProfile;
+            document.getElementById('author-profile-platform').value = profile?.platform || 'instagram';
+            document.getElementById('author-profile-url').value = profile?.url || '';
+            document.getElementById('remove-author-profile').classList.toggle('hidden', !profile);
+            document.getElementById('author-profile-status').textContent = selection
+                ? (profile ? 'يوجد حساب محفوظ لهذا الموضوع.' : 'لا يوجد حساب محفوظ لهذا الموضوع.')
+                : 'اختر موضوعًا أولًا لإضافة حساب الكاتب.';
+            form.querySelector('button[type="submit"]').disabled = !selection;
+            document.getElementById('author-profile-platform').disabled = !selection;
+            document.getElementById('author-profile-url').disabled = !selection;
+        }
+
+        async function saveAuthorProfile(event) {
+            event.preventDefault();
+            const selection = getSourceTopicSelection();
+            if (!selection) {
+                showToast('⚠️ اختر موضوعًا أولًا');
+                return;
+            }
+            const platform = document.getElementById('author-profile-platform').value;
+            const url = safeExternalSourceUrl(document.getElementById('author-profile-url').value);
+            if (!['instagram', 'tiktok'].includes(platform) || !url) {
+                showToast('⚠️ أدخل رابط حساب صالحًا يبدأ بـ http أو https');
+                return;
+            }
+
+            selection.topic.authorProfile = { platform, url };
+            try {
+                await saveUnifiedData(getUnifiedData());
+                renderAuthorProfileForm(getSourceTopicSelection());
+                showToast('✅ تم حفظ حساب الكاتب');
+            } catch (error) {
+                console.error('تعذر حفظ حساب الكاتب:', error);
+            }
+        }
+
+        async function removeAuthorProfile() {
+            const selection = getSourceTopicSelection();
+            if (!selection || !selection.topic.authorProfile || !confirm('إزالة حساب الكاتب من هذا الموضوع؟')) return;
+            selection.topic.authorProfile = null;
+            try {
+                await saveUnifiedData(getUnifiedData());
+                renderAuthorProfileForm(getSourceTopicSelection());
+                showToast('🗑️ تمت إزالة حساب الكاتب');
+            } catch (error) {
+                console.error('تعذر إزالة حساب الكاتب:', error);
+            }
+        }
+
+        async function addTopicSource(event) {
+            event.preventDefault();
+            const selection = getSourceTopicSelection();
+            if (!selection) {
+                showToast('⚠️ اختر موضوعًا أولًا');
+                return;
+            }
+
+            const name = sanitizePlainText(document.getElementById('source-name').value.trim());
+            const url = safeExternalSourceUrl(document.getElementById('source-url').value);
+            if (!name || !url) {
+                showToast('⚠️ أدخل اسم المصدر ورابطًا صالحًا يبدأ بـ http أو https');
+                return;
+            }
+
+            const { topic } = selection;
+            if (!Array.isArray(topic.sources)) topic.sources = [];
+            topic.sources.push({
+                id: typeof crypto?.randomUUID === 'function'
+                    ? crypto.randomUUID()
+                    : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                name,
+                url
+            });
+
+            try {
+                await saveUnifiedData(getUnifiedData());
+                document.getElementById('source-form').reset();
+                refreshSourceTopicOptions();
+                showToast('✅ تمت إضافة المصدر');
+            } catch (error) {
+                console.error('تعذر حفظ مصدر الموضوع:', error);
+            }
+        }
+
+        async function deleteTopicSource(sourceId) {
+            const selection = getSourceTopicSelection();
+            if (!selection || !confirm('حذف هذا المصدر؟')) return;
+            selection.topic.sources = selection.topic.sources.filter(source => source.id !== sourceId);
+            try {
+                await saveUnifiedData(getUnifiedData());
+                refreshSourceTopicOptions();
+                showToast('🗑️ تم حذف المصدر');
+            } catch (error) {
+                console.error('تعذر حذف مصدر الموضوع:', error);
+            }
+        }
+
+        function getAllTemplates(sectionKey) {
+            const data = getUnifiedData();
+            return [
+                ...(BUILT_IN_TEMPLATES[sectionKey] || []),
+                ...(data.templates[sectionKey] || [])
+            ];
+        }
+
+        function getTemplate(sectionKey, templateId) {
+            if (!templateId) return null;
+            return getAllTemplates(sectionKey)
+                .find(t => String(t.id) === String(templateId)) || null;
+        }
+
+        function guideToPrompt(guide) {
+            return String(guide || '')
+                .split(/\n+/)
+                .map(line => line.trim())
+                .filter(Boolean)
+                .map(line => line.endsWith(':') ? line : line + ':')
+                .join('\n\n');
+        }
+
+        function templateStarter(raw, template) {
+            const text = String(raw || '').trim();
+            const starter = String(template?.starter || '').trim();
+            if (!starter || !text || text.startsWith(starter)) return text;
+            return `${starter}\n\n${text}`;
+        }
+
+        function resetTemplateUI(sectionKey) {
+            const config = TEMPLATE_CONFIG[sectionKey];
+            if (!config) return;
+
+            document.getElementById(config.titleLabelId).textContent = config.defaultTitleLabel;
+            document.getElementById(config.titleInputId).placeholder = config.defaultTitlePlaceholder;
+            if (config.contentLabelId) {
+                document.getElementById(config.contentLabelId).textContent = config.defaultContentLabel;
+                document.getElementById(config.contentInputId).placeholder = config.defaultContentPlaceholder;
+            }
+            document.getElementById(config.hintId).textContent = '';
+        }
+
+        function applyCustomTemplate(sectionKey, templateId) {
+            const config = TEMPLATE_CONFIG[sectionKey];
+            if (!config) return;
+
+            const select = document.getElementById(config.selectId);
+            if (select) select.dataset.selectedValue = templateId || '';
+
+            const template = getTemplate(sectionKey, templateId);
+            if (!template) {
+                resetTemplateUI(sectionKey);
+                if (sectionKey === activeFormSection) {
+                    updateImageAttachmentUI(sectionKey, null);
+                }
+                return;
+            }
+
+            document.getElementById(config.titleLabelId).textContent =
+                template.titleLabel || config.defaultTitleLabel;
+            document.getElementById(config.titleInputId).placeholder =
+                template.titleLabel || config.defaultTitlePlaceholder;
+
+            if (config.contentLabelId) {
+                document.getElementById(config.contentLabelId).textContent =
+                    template.contentLabel || config.defaultContentLabel;
+                document.getElementById(config.contentInputId).placeholder =
+                    template.contentLabel || config.defaultContentPlaceholder;
+            }
+
+            const prompt = String(template.starter || '').trim() || guideToPrompt(template.guide);
+            const contentInput = config.contentInputId
+                ? document.getElementById(config.contentInputId)
+                : null;
+            if (contentInput && !contentInput.value.trim() && prompt) {
+                contentInput.value = prompt;
+            }
+
+            const hintParts = [template.description, template.guide ? `الحقول المقترحة: ${template.guide.replace(/\n+/g, ' • ')}` : ''];
+            document.getElementById(config.hintId).textContent = hintParts.filter(Boolean).join(' — ');
+            if (sectionKey === activeFormSection) {
+                updateImageAttachmentUI(sectionKey, template);
+            }
+        }
+
+        function updateImageAttachmentUI(sectionKey, template) {
+            const panel = document.getElementById('template-image-attachment-panel');
+            const input = document.getElementById('template-image-input');
+            const hint = document.getElementById('template-image-hint');
+            if (!panel || !input || !hint) return;
+
+            if (!template || !template.supportsImages) {
+                panel.classList.add('hidden');
+                input.value = '';
+                dashboardAttachedImages = [];
+                renderAttachedImagePreviews();
+                return;
+            }
+
+            const maxImages = Math.max(1, Math.min(6, Number(template.maxImages) || 1));
+            panel.classList.remove('hidden');
+            input.multiple = maxImages > 1;
+            hint.textContent =
+                `${TEMPLATE_CONFIG[sectionKey].label}: يمكنك إرفاق ${maxImages === 1 ? 'صورة واحدة' : `حتى ${maxImages} صور`} مع هذا القالب.`;
+
+            if (dashboardAttachedImages.length > maxImages) {
+                dashboardAttachedImages = dashboardAttachedImages.slice(0, maxImages);
+                renderAttachedImagePreviews();
+            }
+        }
+
+        function renderAttachedImagePreviews() {
+            const grid = document.getElementById('template-image-preview-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            dashboardAttachedImages.forEach((src, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative rounded-xl overflow-hidden border border-darkBorder aspect-video bg-darkInput';
+                const image = document.createElement('img');
+                image.src = src;
+                image.className = 'w-full h-full object-cover';
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'absolute top-2 left-2 w-7 h-7 rounded-full bg-black/70 text-white hover:bg-rose-600 transition';
+                remove.textContent = '×';
+                remove.onclick = () => {
+                    dashboardAttachedImages.splice(index, 1);
+                    renderAttachedImagePreviews();
+                };
+                wrapper.appendChild(image);
+                wrapper.appendChild(remove);
+                grid.appendChild(wrapper);
+            });
+        }
+
+        function handleTemplateImageSelection() {
+            const input = document.getElementById('template-image-input');
+            if (!input) return;
+
+            const sectionKey = activeFormSection;
+            if (!sectionKey) return;
+
+            const activeSelect = document.getElementById(TEMPLATE_CONFIG[sectionKey].selectId);
+            const template = getTemplate(sectionKey, activeSelect ? activeSelect.value : '');
+            if (!template?.supportsImages) return;
+            const maxImages = Math.max(1, Math.min(6, Number(template?.maxImages) || 1));
+            Array.from(input.files || []).forEach(file => {
+                if (dashboardAttachedImages.length >= maxImages) return;
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    if (dashboardAttachedImages.length < maxImages) {
+                        dashboardAttachedImages.push(reader.result);
+                        renderAttachedImagePreviews();
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            input.value = '';
+        }
+
+        function refreshTemplateControls() {
+            const data = getUnifiedData();
+            TEMPLATE_KEYS.forEach(sectionKey => {
+                const config = TEMPLATE_CONFIG[sectionKey];
+                const select = document.getElementById(config.selectId);
+                if (!select) return;
+
+                const selectedValue = select.dataset.selectedValue || select.value || '';
+                select.innerHTML = '<option value="">القالب الأساسي</option>';
+                const builtInGroup = document.createElement('optgroup');
+                builtInGroup.label = 'قوالب جاهزة';
+                (BUILT_IN_TEMPLATES[sectionKey] || []).forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template.id;
+                    option.textContent = template.name;
+                    builtInGroup.appendChild(option);
+                });
+                select.appendChild(builtInGroup);
+
+                const customGroup = document.createElement('optgroup');
+                customGroup.label = 'قوالبك المخصصة';
+                (data.templates[sectionKey] || []).forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template.id;
+                    option.textContent = template.name;
+                    customGroup.appendChild(option);
+                });
+                if (customGroup.children.length) select.appendChild(customGroup);
+
+                const stillExists = (data.templates[sectionKey] || [])
+                    .some(template => String(template.id) === String(selectedValue))
+                    || (BUILT_IN_TEMPLATES[sectionKey] || [])
+                        .some(template => String(template.id) === String(selectedValue));
+                select.value = stillExists ? selectedValue : '';
+                applyCustomTemplate(sectionKey, select.value);
+            });
+        }
+
+        function renderCustomTemplates() {
+            const sectionKey = document.getElementById('template-manager-section').value;
+            const list = document.getElementById('custom-template-list');
+            const templates = getAllTemplates(sectionKey);
+            list.innerHTML = '';
+
+            if (templates.length === 0) {
+                list.innerHTML = '<div class="md:col-span-2 rounded-2xl border border-dashed border-darkBorder p-5 text-center text-xs text-gray-500">لا توجد قوالب لهذا القسم بعد.</div>';
+                return;
+            }
+
+            templates.forEach(template => {
+                const card = document.createElement('div');
+                card.className = 'rounded-2xl border border-darkBorder bg-darkInput/60 p-4 flex items-start justify-between gap-3';
+
+                const text = document.createElement('div');
+                text.className = 'min-w-0';
+                const name = document.createElement('div');
+                name.className = 'font-bold text-white text-sm';
+                name.textContent = template.name;
+                const description = document.createElement('div');
+                description.className = 'text-xs text-gray-400 mt-1';
+                description.textContent =
+                    (template.description || 'قالب مخصص') +
+                    (template.supportsImages ? ' • يدعم إرفاق الصور' : '');
+                text.appendChild(name);
+                text.appendChild(description);
+
+                card.appendChild(text);
+                if (template.builtIn) {
+                    const badge = document.createElement('span');
+                    badge.className = 'shrink-0 text-[10px] text-fuchsia-300 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-lg px-2 py-1';
+                    badge.textContent = 'جاهز';
+                    card.appendChild(badge);
+                } else {
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.className = 'shrink-0 text-gray-500 hover:text-rose-400 p-2';
+                    deleteButton.title = 'حذف القالب';
+                    deleteButton.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+                    deleteButton.onclick = () => deleteCustomTemplate(sectionKey, template.id);
+                    card.appendChild(deleteButton);
+                }
+                list.appendChild(card);
+            });
+        }
+
+        function saveCustomTemplate(e) {
+            e.preventDefault();
+            const sectionKey = document.getElementById('template-manager-section').value;
+            const name = document.getElementById('custom-template-name').value.trim();
+            if (!name) {
+                showToast('⚠️ اكتب اسم القالب أولاً');
+                return;
+            }
+
+            const data = getUnifiedData();
+            data.templates[sectionKey].push({
+                id: `template_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                name,
+                description: document.getElementById('custom-template-description').value.trim(),
+                titleLabel: document.getElementById('custom-template-title-label').value.trim(),
+                contentLabel: document.getElementById('custom-template-content-label').value.trim(),
+                guide: document.getElementById('custom-template-guide').value.trim(),
+                starter: document.getElementById('custom-template-starter').value.trim(),
+                supportsImages: document.getElementById('custom-template-images').checked,
+                maxImages: Math.max(1, Math.min(6, Number(document.getElementById('custom-template-max-images').value) || 1)),
+                imageLayout: Number(document.getElementById('custom-template-max-images').value) > 1 ? 'gallery' : 'single',
+                createdAt: new Date().toISOString()
+            });
+
+            saveUnifiedData(data);
+            e.target.reset();
+            refreshTemplateControls();
+            renderCustomTemplates();
+            showToast(`✅ تم حفظ القالب «${name}» لقسم ${TEMPLATE_CONFIG[sectionKey].label}`);
+        }
+
+        function deleteCustomTemplate(sectionKey, templateId) {
+            if (!confirm('حذف هذا القالب؟')) return;
+            const data = getUnifiedData();
+            data.templates[sectionKey] =
+                (data.templates[sectionKey] || []).filter(t => String(t.id) !== String(templateId));
+            saveUnifiedData(data);
+            refreshTemplateControls();
+            renderCustomTemplates();
+            showToast('🗑️ تم حذف القالب.');
+        }
+
+        function updateStats() {
+            const d = getUnifiedData();
+            document.getElementById('stat-articles').textContent = (d.articles || []).length;
+            document.getElementById('stat-books').textContent = (d.books || []).length;
+            document.getElementById('stat-chess').textContent = (d.chess || []).length;
+            document.getElementById('stat-momagat').textContent = (d.momagat || []).length;
+        }
+
+        function switchMainTab(tabKey) {
+            activeFormSection = tabKey;
+            ['articles', 'chess', 'reading', 'discussions'].forEach(s => {
+                document.getElementById('section-' + s).classList.add('hidden');
+            });
+            document.getElementById('section-' + tabKey).classList.remove('hidden');
+            document.querySelectorAll('.main-tab').forEach(b => {
+                b.classList.remove('bg-indigo-600', 'text-white');
+                b.classList.add('text-gray-400');
+            });
+            const active = document.getElementById('nav-' + tabKey);
+            active.classList.remove('text-gray-400');
+            active.classList.add('bg-indigo-600', 'text-white');
+            const activeSelect = document.getElementById(TEMPLATE_CONFIG[tabKey].selectId);
+            applyCustomTemplate(tabKey, activeSelect ? activeSelect.value : '');
+        }
+
+        function addDialogueRow() {
+            const c = document.getElementById('dialogue-container');
+            const n = c.children.length + 1;
+            const isSecond = n % 2 === 0;
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-2';
+            div.innerHTML = `
+                <div class="w-28 bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-xs font-bold ${isSecond ? 'text-violet-400' : 'text-indigo-400'} text-center">${isSecond ? 'الشخص الثاني' : 'الشخص الأول'}</div>
+                <input type="text" placeholder="نص الرد..." class="flex-1 bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${isSecond ? 'dialogue-p2' : 'dialogue-p1'}">
+            `;
+            c.appendChild(div);
+        }
+
+        function buildTemplateContentHTML(text, template, images) {
+            const paragraphs = String(text || '')
+                .split(/\n+/)
+                .filter(p => p.trim())
+                .map(p => `<p>${escapeHtml(p.trim())}</p>`)
+                .join('');
+
+            return sanitizeHtmlFragment(buildTemplateImagesHTML(template, images) + paragraphs);
+        }
+
+        function buildTemplateImagesHTML(template, images) {
+            if (!template?.supportsImages || !images.length) return '';
+
+            const safeImages = images
+                .map(src => {
+                    const safeSrc = safeImageSource(src);
+                    return safeSrc ? `<img src="${safeSrc}" style="width:calc(50% - 5px);border-radius:12px;object-fit:cover;max-height:340px;">` : '';
+                })
+                .filter(Boolean);
+
+            if (!safeImages.length) return '';
+
+            if (template.imageLayout === 'gallery' || safeImages.length > 1) {
+                return `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">${safeImages.join('')}</div>`;
+            }
+
+            return `<img src="${safeImages[0].match(/src="([^"]+)"/)[1]}" style="max-width:100%;border-radius:14px;margin:0 0 14px;display:block;">`;
+        }
+
+        async function saveTopic(e, sectionKey) {
+            e.preventDefault();
+            let title = '', desc = '', content = '';
+            const templateSelect = document.getElementById(TEMPLATE_CONFIG[sectionKey].selectId);
+            const activeTemplate = getTemplate(sectionKey, templateSelect ? templateSelect.value : '');
+
+            if (sectionKey === 'articles') {
+                title = document.getElementById('art-title').value.trim();
+                const raw = document.getElementById('art-content').value.trim();
+                const prepared = templateStarter(raw, activeTemplate);
+                content = buildTemplateContentHTML(prepared, activeTemplate, dashboardAttachedImages);
+                desc = activeTemplate?.description || 'مقالة';
+            } else if (sectionKey === 'chess') {
+                title = document.getElementById('chess-title').value.trim();
+                const raw = document.getElementById('chess-content').value.trim();
+                const prepared = templateStarter(raw, activeTemplate);
+                content = buildTemplateContentHTML(prepared, activeTemplate, dashboardAttachedImages);
+                desc = activeTemplate?.description || 'شطرنج';
+            } else if (sectionKey === 'reading') {
+                title = document.getElementById('book-title').value.trim();
+                const author = document.getElementById('book-author').value.trim();
+                const raw = document.getElementById('book-content').value.trim();
+                const prepared = templateStarter(raw, activeTemplate);
+                desc = (activeTemplate?.description ? activeTemplate.description + ' — ' : '') + 'المؤلف: ' + author;
+                content = buildTemplateImagesHTML(activeTemplate, dashboardAttachedImages) +
+                          `<p><strong>المؤلف:</strong> ${escapeHtml(author)}</p>` +
+                          buildTemplateContentHTML(prepared, null, []);
+            } else if (sectionKey === 'discussions') {
+                title = document.getElementById('disc-title').value.trim();
+                const p1s = document.querySelectorAll('.dialogue-p1');
+                const p2s = document.querySelectorAll('.dialogue-p2');
+                let html = '';
+                for (let i = 0; i < p1s.length; i++) {
+                    if (p1s[i].value.trim()) html += `<p><strong>🗣️ الشخص الأول:</strong> ${escapeHtml(p1s[i].value.trim())}</p>`;
+                    if (p2s[i] && p2s[i].value.trim()) html += `<p><strong>💬 الشخص الثاني:</strong> ${escapeHtml(p2s[i].value.trim())}</p>`;
+                }
+                const starter = String(activeTemplate?.starter || '').trim();
+                const dialogueContent = starter && !html.includes(starter)
+                    ? `<p>${escapeHtml(starter)}</p>${html}`
+                    : (html || '<p>(فارغ)</p>');
+                content = buildTemplateImagesHTML(activeTemplate, dashboardAttachedImages) + dialogueContent;
+                desc = activeTemplate?.description || 'نقاش';
+            }
+
+            if (!title) { showToast('⚠️ أدخل عنواناً'); return; }
+
+            let imageUrls = [];
+            try {
+                imageUrls = await uploadAttachedImages();
+            } catch (error) {
+                console.error('تعذر رفع الصور إلى Supabase Storage:', error);
+                const reason = error instanceof Error ? error.message : String(error);
+                showToast(`❌ تعذر رفع الصورة: ${reason}`);
+                return;
+            }
+
+            dashboardAttachedImages.forEach((image, index) => {
+                content = content.split(image).join(imageUrls[index]);
+            });
+
+            const record = {
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                title: sanitizePlainText(title),
+                category: sanitizePlainText(desc),
+                content: sanitizeHtmlFragment(content),
+                level: 1,
+                x: (Math.random() - 0.5) * 160,
+                y: (Math.random() - 0.5) * 50,
+                z: (Math.random() - 0.5) * 160,
+                createdAt: new Date().toISOString()
+            };
+
+            const data = getUnifiedData();
+            const map = { articles: 'articles', reading: 'books', chess: 'chess', discussions: 'momagat' };
+            const key = map[sectionKey];
+            if (!data[key]) data[key] = [];
+            data[key].push(record);
+            try {
+                await saveUnifiedData(data);
+            } catch (error) {
+                showToast('❌ تعذر نشر الموضوع في Supabase');
+                return;
+            }
+
+            showToast('✅ تم نشر «' + title + '» في الموقع!');
+            e.target.reset();
+            dashboardAttachedImages = [];
+            renderAttachedImagePreviews();
+
+            if (sectionKey === 'discussions') {
+                document.getElementById('dialogue-container').innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <div class="w-28 bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-xs font-bold text-indigo-400 text-center">الشخص الأول</div>
+                        <input type="text" placeholder="نص الحديث..." class="flex-1 bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 dialogue-p1">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-28 bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-xs font-bold text-violet-400 text-center">الشخص الثاني</div>
+                        <input type="text" placeholder="نص الرد..." class="flex-1 bg-darkInput border border-darkBorder rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 dialogue-p2">
+                    </div>
+                `;
+            }
+
+            const templateSelectAfterSave = document.getElementById(TEMPLATE_CONFIG[sectionKey].selectId);
+            if (templateSelectAfterSave) {
+                templateSelectAfterSave.value = '';
+                templateSelectAfterSave.dataset.selectedValue = '';
+            }
+            applyCustomTemplate(sectionKey, '');
+            loadSavedTopics();
+        }
+
+        function loadSavedTopics() {
+            const data = getUnifiedData();
+            const tbody = document.getElementById('db-table-body');
+            tbody.innerHTML = '';
+            refreshSourceTopicOptions();
+            refreshTemplateControls();
+            renderCustomTemplates();
+
+            const names = {
+                articles: { n: 'المقالات', c: 'bg-indigo-500/10 text-indigo-400' },
+                chess: { n: 'الشطرنج', c: 'bg-violet-500/10 text-violet-400' },
+                books: { n: 'ركن القراءة', c: 'bg-amber-500/10 text-amber-400' },
+                momagat: { n: 'مماقات', c: 'bg-emerald-500/10 text-emerald-400' }
+            };
+
+            const all = [];
+            ['articles', 'chess', 'books', 'momagat'].forEach(k => {
+                (data[k] || []).forEach(i => all.push({ ...i, _k: k }));
+            });
+            all.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
+            if (all.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-gray-500">لا توجد سجلات.</td></tr>`;
+                updateStats();
+                return;
+            }
+
+            all.forEach(item => {
+                const info = names[item._k] || names.articles;
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-darkInput/50 transition';
+                tr.innerHTML = `
+                    <td class="py-3 px-4"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-bold ${info.c}">${escapeHtml(info.n)}</span></td>
+                    <td class="py-3 px-4 font-bold text-white">${escapeHtml(item.title || '')}</td>
+                    <td class="py-3 px-4 text-gray-400 text-xs">${escapeHtml(item.category || '')}</td>
+                    <td class="py-3 px-4 text-center">
+                        <button onclick="deleteRecord(${item.id})" class="text-gray-400 hover:text-rose-400 p-1.5"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            updateStats();
+        }
+
+        function deleteRecord(id) {
+            if (!confirm('حذف هذا السجل؟')) return;
+            const data = getUnifiedData();
+            ['articles', 'books', 'chess', 'momagat'].forEach(k => {
+                if (data[k]) data[k] = data[k].filter(i => i.id !== id);
+            });
+            saveUnifiedData(data);
+            loadSavedTopics();
+            showToast('🗑️ تم الحذف.');
+        }
+
+        function confirmResetAll() {
+            if (!confirm('⚠️ سيتم حذف كل شيء. متأكد؟')) return;
+            const emptyData = normalizeData({});
+            unifiedData = emptyData;
+            syncDataToSupabase(emptyData);
+            loadSavedTopics();
+            showToast('🧹 تم مسح الكل.');
+        }
+
+        function openSite() { window.open(SITE_URL, '_blank'); }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            t.classList.remove('translate-y-24', 'opacity-0');
+            setTimeout(() => t.classList.add('translate-y-24', 'opacity-0'), 3000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('template-image-input')
+                .addEventListener('change', handleTemplateImageSelection);
+            document.getElementById('login-form').addEventListener('submit', signInDashboard);
+            document.getElementById('source-form').addEventListener('submit', addTopicSource);
+            document.getElementById('author-profile-form').addEventListener('submit', saveAuthorProfile);
+        });
+    </script>
+</body>
+</html>
