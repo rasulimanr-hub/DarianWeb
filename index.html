@@ -48,23 +48,34 @@
         }
 
         (function loadDashboardFromSupabase() {
+            let cachedData = null;
             try {
                 const cached = localStorage.getItem(DASHBOARD_KEY);
-                if (cached) {
-                    window.__dashboardData = JSON.parse(cached);
-                    return;
-                }
+                if (cached) cachedData = JSON.parse(cached);
+            } catch (error) {
+                console.warn('تعذر تحميل النسخة المحلية من البيانات:', error);
+            }
+
+            try {
                 const request = new XMLHttpRequest();
                 request.open('GET', `${SUPABASE_DATA_URL}?id=eq.1&select=data`, false);
                 request.setRequestHeader('apikey', SUPABASE_KEY);
+                request.setRequestHeader('Cache-Control', 'no-cache');
+                request.setRequestHeader('Pragma', 'no-cache');
                 request.send();
                 if (request.status < 200 || request.status >= 300) {
                     throw new Error(`Supabase GET failed: ${request.status}`);
                 }
                 const rows = JSON.parse(request.responseText);
                 window.__dashboardData = rows[0] && rows[0].data ? rows[0].data : {};
+                try {
+                    localStorage.setItem(DASHBOARD_KEY, JSON.stringify(window.__dashboardData));
+                } catch (error) {
+                    console.warn('تعذر تحديث النسخة المحلية من البيانات:', error);
+                }
             } catch (error) {
                 console.error('تعذر تحميل البيانات من Supabase:', error);
+                if (cachedData) window.__dashboardData = cachedData;
             }
         })();</script>
     <style>

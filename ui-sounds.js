@@ -30,22 +30,22 @@
     function playSound(context, type) {
         const now = context.currentTime;
         if (type === 'enter') {
-            playTone(context, 180, 440, now, 0.34, 0.055, 'sine');
-            playTone(context, 420, 880, now + 0.06, 0.24, 0.026, 'triangle');
-            playTone(context, 660, 990, now + 0.12, 0.18, 0.014, 'sine');
+            playTone(context, 180, 440, now, 0.34, 0.5, 'sine');
+            playTone(context, 420, 880, now + 0.06, 0.24, 0.236, 'triangle');
+            playTone(context, 660, 990, now + 0.12, 0.18, 0.127, 'sine');
             return;
         }
         if (type === 'exit') {
-            playTone(context, 520, 260, now, 0.3, 0.045, 'sine');
-            playTone(context, 350, 175, now + 0.05, 0.28, 0.022, 'triangle');
+            playTone(context, 520, 260, now, 0.3, 0.409, 'sine');
+            playTone(context, 350, 175, now + 0.05, 0.28, 0.2, 'triangle');
             return;
         }
         if (type === 'section') {
-            playTone(context, 310, 620, now, 0.23, 0.035, 'sine');
-            playTone(context, 620, 830, now + 0.045, 0.16, 0.015, 'triangle');
+            playTone(context, 310, 620, now, 0.23, 0.318, 'sine');
+            playTone(context, 620, 830, now + 0.045, 0.16, 0.136, 'triangle');
             return;
         }
-        playTone(context, 560, 760, now, 0.12, 0.025, 'sine');
+        playTone(context, 560, 760, now, 0.12, 0.227, 'sine');
     }
 
     document.addEventListener('click', event => {
